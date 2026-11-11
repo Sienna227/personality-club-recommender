@@ -1,53 +1,343 @@
+
 # 개인 성향 분석 기반 개인 맞춤형 교내활동 추천 시스템
 # 문제해결과컴퓨팅사고 11조 [말차중조]
 
+import csv
 import time
+from pathlib import Path
 
-# 시작 화면
+
+# ============================================================
+# 1. 동아리 데이터 읽기
+# ============================================================
+
+clubs_file = Path(__file__).with_name("clubs.csv")
+
+if not clubs_file.exists():
+    print("오류: clubs.csv 파일을 찾을 수 없습니다.")
+    print("main.py와 clubs.csv를 같은 폴더에 넣어주세요.")
+    raise SystemExit
+
+with open(clubs_file, "r", encoding="utf-8-sig", newline="") as file:
+    reader = csv.DictReader(file)
+    clubs_data = list(reader)
+
+required_columns = [
+    "동아리명", "세부 소속", "분야", "활성여부",
+    "활동강도", "관계방식", "지향점", "활동성격"
+]
+
+if not reader.fieldnames or not all(
+    column in reader.fieldnames for column in required_columns
+):
+    print("오류: clubs.csv의 열 이름을 확인해주세요.")
+    print("엑셀에서 내보낸 CSV 파일이 올바른지 확인해주세요.")
+    raise SystemExit
+
+print(f"동아리 데이터 로드 완료: {len(clubs_data)}개")
+
+
+# ============================================================
+# 2. 관심 분야별 동아리 필터링
+# ============================================================
+
+def matches_field(club, selected_field):
+    if selected_field == "전체":
+        return True
+
+    category = club.get("세부 소속", "")
+    field = club.get("분야", "")
+    text = category + " " + field
+
+    keywords_by_field = {
+        "스포츠": [
+            "스포츠동아리", "농구", "배드민턴", "축구", "야구",
+            "태권도", "택견", "무술", "스노보드", "테니스",
+            "검도", "e스포츠", "댄스스포츠", "헬스"
+        ],
+        "학술": [
+            "학술동아리", "인문사회동아리", "프로그래밍",
+            "웹 프로그래밍", "토론", "영어회화", "시사",
+            "경영/경제", "천문학", "국제리더십", "방송 청취",
+            "글쓰기", "문학", "영화 연구"
+        ],
+        "예술": [
+            "연행예술동아리", "평면예술동아리",
+            "밴드", "댄스", "연극", "국악", "합창",
+            "음악", "오케스트라", "만화", "미술",
+            "영화", "글쓰기", "서예", "사진", "마술",
+            "순수미술", "동양화", "음악 창작"
+        ],
+        "봉사": [
+            "봉사동아리", "봉사", "환경", "장애인권"
+        ],
+        "친목": [
+            "취미교양동아리", "종교동아리",
+            "커피", "차 및 카페", "친목"
+        ]
+    }
+
+    keywords = keywords_by_field.get(selected_field)
+
+    if keywords is None:
+        return True
+
+    return any(keyword in text for keyword in keywords)
+
+
+# ============================================================
+# 3. 성향 매칭 점수 계산
+# 현재 데이터에서 명확하게 대응되는 P/T 차원만 사용
+# ============================================================
+
+def calculate_match_score(club, result):
+    relationship = club.get("관계방식", "")
+
+    if result[1] == "P" and relationship == "개인몰입":
+        return 1
+
+    if result[1] == "T" and relationship == "교류협업":
+        return 1
+
+    return 0
+
+
+# ============================================================
+# 4. 추천 이유 생성
+# ============================================================
+
+def generate_match_reason(club, result, selected_field):
+    reasons = []
+
+    relationship = club.get("관계방식", "")
+
+    if result[1] == "P" and relationship == "개인몰입":
+        reasons.append(
+            "개인적으로 집중하며 활동하는 성향과 잘 맞습니다."
+        )
+    elif result[1] == "T" and relationship == "교류협업":
+        reasons.append(
+            "팀원들과 교류하고 협력하는 성향과 잘 맞습니다."
+        )
+    else:
+        reasons.append(
+            "관계 방식이 성향과 완전히 일치하지는 않지만, "
+            "선택한 관심 분야를 바탕으로 추천합니다."
+        )
+
+    field = club.get("분야", "").strip()
+
+    if selected_field != "전체":
+        reasons.append(
+            f"선택한 관심 분야는 {selected_field}이며, "
+            f"이 동아리의 주요 활동 분야는 {field}입니다."
+        )
+    else:
+        reasons.append(
+            f"주요 활동 분야는 {field}입니다."
+        )
+
+    return " ".join(reasons)
+
+
+# ============================================================
+# 5. 시작 화면
+# ============================================================
+
 print("=" * 70)
 print("🎓 개인 맞춤형 교내활동 추천 시스템")
 print("🎓 Personalized Campus Activity Recommendation System")
 print("=" * 70)
+
 print("\n안녕하세요!")
 print("간단한 성향 검사를 통해 당신에게 맞는 교내활동을 추천해드립니다.")
 print("자신에게 가장 맞는 선택지를 골라주세요.")
+
 input("👉 시작하려면 Enter 키를 누르세요...")
 
-scores = {"S": 0,"G": 0,"P": 0,"T": 0,"I": 0,"O": 0,"PL": 0,"C": 0}
 
-# 질문 데이터
-questions = [{"question": "1. 새로운 사람들과 친해질 수 있는 활동이 더 좋다.","positive": "S","negative": "G"},
-    {"question": "2. 활동을 선택할 때 재미보다 결과와 성과가 중요하다.","positive": "G","negative": "S"},
-    {"question": "3. 사람들과 어울리는 활동이 혼자 하는 활동보다 좋다.","positive": "S","negative": "G"},
-    {"question": "4. 혼자 집중해서 하는 활동이 편하다.","positive": "P","negative": "T"},
-    {"question": "5. 팀 프로젝트나 단체 활동이 재미있다.","positive": "T","negative": "P"},
-    {"question": "6. 다른 사람들과 역할을 나누는 활동이 좋다.","positive": "T","negative": "P"},
-    {"question": "7. 실내 활동이 더 편하다.","positive": "I","negative": "O"},
-    {"question": "8. 몸을 움직이는 활동을 좋아한다.","positive": "O","negative": "I"},
-    {"question": "9. 조용한 공간에서 활동하는 것이 좋다.","positive": "I","negative": "O"},
-    {"question": "10. 계획이 잘 정리된 활동이 좋다.","positive": "PL","negative": "C"},
-    {"question": "11. 새로운 도전을 하는 활동이 재미있다.","positive": "C","negative": "PL"},
-    {"question": "12. 익숙한 방식보다 새로운 경험을 선호한다.","positive": "C","negative": "PL"}]
+# ============================================================
+# 6. 성향 검사 질문
+# ============================================================
 
-# 16가지 성향 유형 데이터
-type_details = {"SPIN": {"name": "조용한 자기계발형","activity": "정적","relation": "개인몰입","focus": "취미향유","style": "표현창작","clubs": ["성균서도회", "서예부"]},
-    "SPIC": {"name": "몰입형 탐구가","activity": "정적","relation": "개인몰입","focus": "취미향유","style": "탐구실천","clubs": ["SAPA"]},
-    "SPON": {"name": "독립적 실천가","activity": "정적","relation": "개인몰입","focus": "역량성장","style": "표현창작","clubs": ["그린나래", "성미회", "행소문화회", "글터"]},
-    "SPOC": {"name": "자유로운 개척자","activity": "정적","relation": "개인몰입","focus": "역량성장","style": "탐구실천","clubs": ["TIME", "GNC"]},
-    "STIN": {"name": "따뜻한 실내교류형","activity": "정적","relation": "교류협업","focus": "취미향유","style": "표현창작","clubs": ["겟세마네", "반촌", "성불회", "CCC", "UBF", "다정"]},
-    "STIC": {"name": "창의적 협업가","activity": "정적","relation": "교류협업","focus": "취미향유","style": "탐구실천","clubs": ["별누리", "팀선비", "다정"]},
-    "STON": {"name": "꾸준한 공동체형","activity": "정적","relation": "교류협업","focus": "역량성장","style": "표현창작","clubs": ["심산한누리", "호우회", "KUSA", "HERA"]},
-    "STOC": {"name": "활기찬 팀플레이어","activity": "정적","relation": "교류협업","focus": "역량성장","style": "탐구실천","clubs": ["멋쟁이 사자처럼", "SKFC", "삼은사과", "패거리","풍물패 얼", "SWAY", "꼬", "능라촌","대동악회", "사후", "CT", "엘세데아","애송이", "GROOV", "JDA", "TuNA","수선관 그 밴드", "헤게모니", "파란"]},
-    "GPIN": {"name": "계획적 성장형","activity": "활동","relation": "개인몰입","focus": "취미향유","style": "표현창작","clubs": ["KCC"]},
-    "GPIC": {"name": "집중형 문제해결가","activity": "활동","relation": "개인몰입","focus": "취미향유","style": "탐구실천","clubs": ["기우회", "Equal", "Re:Skku"]},
-    "GPON": {"name": "성실한 실행가","activity": "활동","relation": "개인몰입","focus": "역량성장","style": "표현창작","clubs": ["Be-Nay", "AIESEC"]},
-    "GPOC": {"name": "독립형 도전자","activity": "활동","relation": "개인몰입","focus": "역량성장","style": "탐구실천","clubs": ["태권도부", "벽걸강산", "검도부"]},
-    "GTIN": {"name": "전략적 협력가","activity": "활동","relation": "교류협업","focus": "취미향유","style": "표현창작","clubs": ["SKKIP", "SKKUO", "영숨촌"]},
-    "GTIC": {"name": "프로젝트 추진형","activity": "활동","relation": "교류협업","focus": "취미향유","style": "탐구실천","clubs": ["성균극회", "성균합창단"]},
-    "GTON": {"name": "책임감 있는 실무형","activity": "활동","relation": "교류협업","focus": "역량성장","style": "표현창작","clubs": ["UNSA", "AIESEC"]},
-    "GTOC": {"name": "도전형 리더형","activity": "활동","relation": "교류협업","focus": "역량성장","style": "탐구실천","clubs": ["농성회", "라켓챌린지", "성균축구단","킹고야구반", "FC어우락", "SCOOP","MANIA", "STC", "제사포","아가리", "Ecos", "MIDAS","Bizball", "SIGMA FC", "클래스","천종", "글로벌"]}}
+scores = {
+    "S": 0, "G": 0,
+    "P": 0, "T": 0,
+    "I": 0, "O": 0,
+    "PL": 0, "C": 0
+}
 
-# 관심 분야 입력
+questions = [
+    {
+        "question": "1. 새로운 사람들과 친해질 수 있는 활동이 더 좋다.",
+        "positive": "S", "negative": "G"
+    },
+    {
+        "question": "2. 활동을 선택할 때 재미보다 결과와 성과가 중요하다.",
+        "positive": "G", "negative": "S"
+    },
+    {
+        "question": "3. 사람들과 어울리는 활동이 혼자 하는 활동보다 좋다.",
+        "positive": "S", "negative": "G"
+    },
+    {
+        "question": "4. 혼자 집중해서 하는 활동이 편하다.",
+        "positive": "P", "negative": "T"
+    },
+    {
+        "question": "5. 팀 프로젝트나 단체 활동이 재미있다.",
+        "positive": "T", "negative": "P"
+    },
+    {
+        "question": "6. 다른 사람들과 역할을 나누는 활동이 좋다.",
+        "positive": "T", "negative": "P"
+    },
+    {
+        "question": "7. 실내 활동이 더 편하다.",
+        "positive": "I", "negative": "O"
+    },
+    {
+        "question": "8. 몸을 움직이는 활동을 좋아한다.",
+        "positive": "O", "negative": "I"
+    },
+    {
+        "question": "9. 조용한 공간에서 활동하는 것이 좋다.",
+        "positive": "I", "negative": "O"
+    },
+    {
+        "question": "10. 계획이 잘 정리된 활동이 좋다.",
+        "positive": "PL", "negative": "C"
+    },
+    {
+        "question": "11. 새로운 도전을 하는 활동이 재미있다.",
+        "positive": "C", "negative": "PL"
+    },
+    {
+        "question": "12. 익숙한 방식보다 새로운 경험을 선호한다.",
+        "positive": "C", "negative": "PL"
+    }
+]
+
+
+# ============================================================
+# 7. 16가지 성향 유형 데이터
+# ============================================================
+
+type_details = {
+    "SPIN": {
+        "name": "조용한 자기계발형",
+        "activity": "정적", "relation": "개인몰입",
+        "focus": "취미향유", "style": "표현창작",
+        "clubs": ["성균서도회", "서예부"]
+    },
+    "SPIC": {
+        "name": "몰입형 탐구가",
+        "activity": "정적", "relation": "개인몰입",
+        "focus": "취미향유", "style": "탐구실천",
+        "clubs": ["SAPA"]
+    },
+    "SPON": {
+        "name": "독립적 실천가",
+        "activity": "정적", "relation": "개인몰입",
+        "focus": "역량성장", "style": "표현창작",
+        "clubs": ["그린나래", "성미회", "행소문화회", "글터"]
+    },
+    "SPOC": {
+        "name": "자유로운 개척자",
+        "activity": "정적", "relation": "개인몰입",
+        "focus": "역량성장", "style": "탐구실천",
+        "clubs": ["TIME", "GNC"]
+    },
+    "STIN": {
+        "name": "따뜻한 실내교류형",
+        "activity": "정적", "relation": "교류협업",
+        "focus": "취미향유", "style": "표현창작",
+        "clubs": ["겟세마네", "반촌", "성불회", "CCC", "UBF", "다정"]
+    },
+    "STIC": {
+        "name": "창의적 협업가",
+        "activity": "정적", "relation": "교류협업",
+        "focus": "취미향유", "style": "탐구실천",
+        "clubs": ["별누리", "팀선비", "다정"]
+    },
+    "STON": {
+        "name": "꾸준한 공동체형",
+        "activity": "정적", "relation": "교류협업",
+        "focus": "역량성장", "style": "표현창작",
+        "clubs": ["심산한누리", "호우회", "KUSA", "HERA"]
+    },
+    "STOC": {
+        "name": "활기찬 팀플레이어",
+        "activity": "정적", "relation": "교류협업",
+        "focus": "역량성장", "style": "탐구실천",
+        "clubs": [
+            "멋쟁이 사자처럼", "SKFC", "삼은사과", "패거리",
+            "풍물패 얼", "SWAY", "꼬", "능라촌", "대동악회",
+            "사후", "CT", "엘세데아", "애송이", "GROOV",
+            "JDA", "TuNA", "수선관 그 밴드", "헤게모니",
+            "파란"
+        ]
+    },
+    "GPIN": {
+        "name": "계획적 성장형",
+        "activity": "활동", "relation": "개인몰입",
+        "focus": "취미향유", "style": "표현창작",
+        "clubs": ["KCC"]
+    },
+    "GPIC": {
+        "name": "집중형 문제해결가",
+        "activity": "활동", "relation": "개인몰입",
+        "focus": "취미향유", "style": "탐구실천",
+        "clubs": ["기우회", "Equal", "Re:Skku"]
+    },
+    "GPON": {
+        "name": "성실한 실행가",
+        "activity": "활동", "relation": "개인몰입",
+        "focus": "역량성장", "style": "표현창작",
+        "clubs": ["Be-Nay", "AIESEC"]
+    },
+    "GPOC": {
+        "name": "독립형 도전자",
+        "activity": "활동", "relation": "개인몰입",
+        "focus": "역량성장", "style": "탐구실천",
+        "clubs": ["태권도부", "벽걸강산", "검도부"]
+    },
+    "GTIN": {
+        "name": "전략적 협력가",
+        "activity": "활동", "relation": "교류협업",
+        "focus": "취미향유", "style": "표현창작",
+        "clubs": ["SKKIP", "SKKUO", "영숨촌"]
+    },
+    "GTIC": {
+        "name": "프로젝트 추진형",
+        "activity": "활동", "relation": "교류협업",
+        "focus": "취미향유", "style": "탐구실천",
+        "clubs": ["성균극회", "성균합창단"]
+    },
+    "GTON": {
+        "name": "책임감 있는 실무형",
+        "activity": "활동", "relation": "교류협업",
+        "focus": "역량성장", "style": "표현창작",
+        "clubs": ["UNSA", "AIESEC"]
+    },
+    "GTOC": {
+        "name": "도전형 리더형",
+        "activity": "활동", "relation": "교류협업",
+        "focus": "역량성장", "style": "탐구실천",
+        "clubs": [
+            "농성회", "라켓챌린지", "성균축구단", "킹고야구반",
+            "FC어우락", "SCOOP", "MANIA", "STC", "제사포",
+            "아가리", "Ecos", "MIDAS", "Bizball", "SIGMA FC",
+            "클래스", "천종", "글로벌"
+        ]
+    }
+}
+
+
+# ============================================================
+# 8. 관심 분야 선택
+# ============================================================
+
 print("\n" + "=" * 70)
 print("📌 관심 분야 선택")
 print("=" * 70)
@@ -58,16 +348,35 @@ print("4. 봉사")
 print("5. 친목")
 print("6. 전체")
 
-field_choice = input("\n👉 관심 분야 번호 입력: ")
-field_map = {"1": "스포츠","2": "학술","3": "예술","4": "봉사","5": "친목","6": "전체"}
-selected_field = field_map.get(field_choice, "전체")
+field_map = {
+    "1": "스포츠",
+    "2": "학술",
+    "3": "예술",
+    "4": "봉사",
+    "5": "친목",
+    "6": "전체"
+}
+
+field_choice = input("\n👉 관심 분야 번호 입력: ").strip()
+
+while field_choice not in field_map:
+    field_choice = input(
+        "👉 다시 입력하세요(1~6): "
+    ).strip()
+
+selected_field = field_map[field_choice]
 print(f"\n선택한 분야: {selected_field}")
 time.sleep(1)
 
-# 성향 검사 시작
+
+# ============================================================
+# 9. 성향 검사 진행
+# ============================================================
+
 print("\n" + "=" * 70)
 print("🧠 성향 분석 시작")
 print("=" * 70)
+
 for q in questions:
     print("\n" + q["question"])
     print("A. 매우 그렇다")
@@ -75,9 +384,12 @@ for q in questions:
     print("C. 보통이다")
     print("D. 아니다")
     print("E. 매우 아니다")
-    answer = input("👉 입력(A~E): ").upper()
+
+    answer = input("👉 입력(A~E): ").strip().upper()
+
     while answer not in ["A", "B", "C", "D", "E"]:
-        answer = input("👉 다시 입력하세요(A~E): ").upper()
+        answer = input("👉 다시 입력하세요(A~E): ").strip().upper()
+
     if answer == "A":
         scores[q["positive"]] += 2
         scores[q["negative"]] -= 2
@@ -85,8 +397,7 @@ for q in questions:
         scores[q["positive"]] += 1
         scores[q["negative"]] -= 1
     elif answer == "C":
-        scores[q["positive"]] += 0
-        scores[q["negative"]] += 0
+        pass
     elif answer == "D":
         scores[q["positive"]] -= 1
         scores[q["negative"]] += 1
@@ -94,40 +405,57 @@ for q in questions:
         scores[q["positive"]] -= 2
         scores[q["negative"]] += 2
 
-# 최종 성향 결과 계산
-result = ""
-if scores["S"] >= scores["G"]:
-    result += "S"
-else:
-    result += "G"
-if scores["P"] >= scores["T"]:
-    result += "P"
-else:
-    result += "T"
-if scores["I"] >= scores["O"]:
-    result += "I"
-else:
-    result += "O"
-if scores["PL"] >= scores["C"]:
-    result += "N"
-else:
-    result += "C"
 
-# 결과 출력
+# ============================================================
+# 10. 최종 성향 유형 계산
+# ============================================================
+
+result = ""
+
+result += "S" if scores["S"] >= scores["G"] else "G"
+result += "P" if scores["P"] >= scores["T"] else "T"
+result += "I" if scores["I"] >= scores["O"] else "O"
+result += "N" if scores["PL"] >= scores["C"] else "C"
+
+user_type = type_details[result]
+
+
+# ============================================================
+# 11. 성향 분석 결과 출력
+# ============================================================
+
 print("\n" + "=" * 70)
 print("🎯 성향 분석 결과")
 print("=" * 70)
 print(f"\n당신의 성향 유형은 [{result}] 입니다.")
-if result in type_details:
-    user_type = type_details[result]
-    print(f"\n📌 유형 이름 : {user_type['name']}")
-    print("\n📖 유형 특징")
-    print(f"- 활동강도 : {user_type['activity']}")
-    print(f"- 관계방식 : {user_type['relation']}")
-    print(f"- 지향점 : {user_type['focus']}")
-    print(f"- 활동성격 : {user_type['style']}")
+print(f"\n📌 유형 이름 : {user_type['name']}")
+print("\n📖 유형 특징")
 
-# 분석
+if result[0] == "S":
+    print("- 관계와 교류를 중요하게 생각합니다.")
+else:
+    print("- 목표 달성과 성과를 중요하게 생각합니다.")
+
+if result[1] == "P":
+    print("- 혼자 집중하며 활동하는 것을 선호합니다.")
+else:
+    print("- 팀원들과 협력하며 활동하는 것을 선호합니다.")
+
+if result[2] == "I":
+    print("- 실내에서 집중할 수 있는 활동을 선호합니다.")
+else:
+    print("- 몸을 움직이며 활동적인 경험을 선호합니다.")
+
+if result[3] == "N":
+    print("- 계획적이고 안정적인 활동을 선호합니다.")
+else:
+    print("- 새로운 경험과 도전적인 활동을 선호합니다.")
+
+
+# ============================================================
+# 12. 성향 코드 설명
+# ============================================================
+
 print("\n" + "=" * 70)
 print("🔍 성향 코드 설명")
 print("=" * 70)
@@ -140,71 +468,108 @@ print("O = Outdoor (활동형)")
 print("N = Normal / Planned (안정형)")
 print("C = Challenging (도전형)")
 
+
+# ============================================================
+# 13. 세부 성향 분석
+# ============================================================
+
 print("\n" + "=" * 70)
 print("📊 세부 성향 분석")
 print("=" * 70)
+
 if result[0] == "S":
     print("- 사람들과 어울리는 활동을 선호합니다.")
 else:
     print("- 목표와 성과 중심 활동을 선호합니다.")
+
 if result[1] == "P":
     print("- 혼자 몰입하는 활동에 강점이 있습니다.")
 else:
     print("- 협업과 팀 활동에 강점이 있습니다.")
+
 if result[2] == "I":
     print("- 실내 활동 환경을 선호합니다.")
 else:
     print("- 활동적이고 야외 활동을 좋아합니다.")
+
 if result[3] == "N":
     print("- 안정적이고 계획적인 활동을 선호합니다.")
 else:
     print("- 새로운 도전과 변화를 좋아합니다.")
 
-# 추천 동아리 출력
+
+# ============================================================
+# 14. 동아리 추천
+# ============================================================
+
 print("\n" + "=" * 70)
 print("🏆 추천 동아리")
 print("=" * 70)
-if result in type_details:
-    clubs = user_type["clubs"]
-    for i, club in enumerate(clubs, start=1):
-        print(f"\n[{i}] {club}")
-        print("추천 이유:")
-        if user_type["relation"] == "개인몰입":
-            print("- 혼자 몰입하며 활동 가능")
-        else:
-            print("- 다양한 사람들과 협업 가능")
+print(f"선택한 관심 분야: {selected_field}")
+print(f"성향 유형: {result} - {user_type['name']}")
 
-        if user_type["focus"] == "역량성장":
-            print("- 자기계발 및 성장 가능")
-        else:
-            print("- 취미와 재미 중심 활동 가능")
+filtered_clubs = [
+    club for club in clubs_data
+    if club.get("활성여부", "").strip() == "활성"
+    and matches_field(club, selected_field)
+]
 
-        if user_type["style"] == "탐구실천":
-            print("- 새로운 경험과 도전 가능")
-        else:
-            print("- 창의성과 표현 활동 가능")
+for club in filtered_clubs:
+    club["매칭점수"] = calculate_match_score(club, result)
 
-# 세부 점수 출력
+filtered_clubs.sort(
+    key=lambda club: club["매칭점수"],
+    reverse=True
+)
+
+if not filtered_clubs:
+    print("\n선택한 분야에 해당하는 활성 동아리가 없습니다.")
+    print("관심 분야를 '전체'로 선택해 다시 확인해 보세요.")
+else:
+    print(f"\n검색된 활성 동아리: {len(filtered_clubs)}개")
+    print("※ 매칭 점수는 현재 관계 방식(P/T) 기준입니다.")
+
+    for i, club in enumerate(filtered_clubs, start=1):
+        print(f"\n[{i}] {club.get('동아리명', '이름 없음')}")
+        print(f"- 성향 매칭 점수: {club['매칭점수']}/1점")
+        print(
+            "- 추천 이유: "
+            + generate_match_reason(club, result, selected_field)
+        )
+        print(f"- 소속: {club.get('세부 소속', '')}")
+        print(f"- 활동 분야: {club.get('분야', '')}")
+        print(f"- 활동 강도: {club.get('활동강도', '')}")
+        print(f"- 관계 방식: {club.get('관계방식', '')}")
+        print(f"- 지향점: {club.get('지향점', '')}")
+        print(f"- 활동 성격: {club.get('활동성격', '')}")
+
+
+# ============================================================
+# 15. 세부 성향 점수
+# ============================================================
+
 print("\n" + "=" * 70)
 print("📈 세부 성향 점수")
 print("=" * 70)
 
 print(f"Social(S): {scores['S']}")
 print(f"Goal(G): {scores['G']}")
-
 print(f"Personal(P): {scores['P']}")
 print(f"Team(T): {scores['T']}")
-
 print(f"Indoor(I): {scores['I']}")
 print(f"Outdoor(O): {scores['O']}")
-
 print(f"Planned(N): {scores['PL']}")
 print(f"Challenging(C): {scores['C']}")
 
-# 전체 16유형 출력
+
+# ============================================================
+# 16. 전체 16유형 요약
+# ============================================================
+
 print("\n" + "=" * 70)
 print("📚 전체 16유형 요약")
 print("=" * 70)
+
 for code, info in type_details.items():
     print(f"\n[{code}] {info['name']}")
     print(f"활동강도 : {info['activity']}")
@@ -212,11 +577,17 @@ for code, info in type_details.items():
     print(f"지향점 : {info['focus']}")
     print(f"활동성격 : {info['style']}")
     print("대표 동아리 : ", end="")
-    for club in info["clubs"][:3]:
-        print(club, end=" / ")
+
+    for club_name in info["clubs"][:3]:
+        print(club_name, end=" / ")
+
     print()
 
-# 종료
+
+# ============================================================
+# 17. 종료
+# ============================================================
+
 print("\n" + "=" * 70)
 print("✅ 프로그램 종료")
 print("감사합니다 😊")
