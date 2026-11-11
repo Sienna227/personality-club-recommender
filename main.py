@@ -571,18 +571,27 @@ print("📚 전체 16유형 요약")
 print("=" * 70)
 
 for code, info in type_details.items():
+    # CSV에서 해당 유형의 네 가지 속성이 모두 일치하는 동아리 찾기
+    matching_clubs = [
+        club.get("동아리명", "").strip()
+        for club in clubs_data
+        if club.get("활성여부", "").strip() == "활성"
+        and club.get("활동강도", "").strip() == info["activity"]
+        and club.get("관계방식", "").strip() == info["relation"]
+        and club.get("지향점", "").strip() == info["focus"]
+        and club.get("활동성격", "").strip() == info["style"]
+    ]
+
     print(f"\n[{code}] {info['name']}")
     print(f"활동강도 : {info['activity']}")
     print(f"관계방식 : {info['relation']}")
     print(f"지향점 : {info['focus']}")
     print(f"활동성격 : {info['style']}")
-    print("대표 동아리 : ", end="")
 
-    for club_name in info["clubs"][:3]:
-        print(club_name, end=" / ")
-
-    print()
-
+    if matching_clubs:
+        print("대표 동아리 : " + " / ".join(matching_clubs[:3]))
+    else:
+        print("대표 동아리 : 현재 CSV에 네 가지 속성이 모두 일치하는 동아리가 없습니다.")
 
 # ============================================================
 # 17. 종료
@@ -591,4 +600,5 @@ for code, info in type_details.items():
 print("\n" + "=" * 70)
 print("✅ 프로그램 종료")
 print("감사합니다 😊")
+print("=" * 70)
 print("=" * 70)
