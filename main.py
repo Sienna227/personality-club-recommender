@@ -223,115 +223,43 @@ questions = [
 # 7. 16가지 성향 유형 데이터
 # ============================================================
 
-type_details = {
-    "SPIN": {
-        "name": "조용한 자기계발형",
-        "activity": "정적", "relation": "개인몰입",
-        "focus": "취미향유", "style": "표현창작",
-        "clubs": ["성균서도회", "서예부"]
-    },
-    "SPIC": {
-        "name": "몰입형 탐구가",
-        "activity": "정적", "relation": "개인몰입",
-        "focus": "취미향유", "style": "탐구실천",
-        "clubs": ["SAPA"]
-    },
-    "SPON": {
-        "name": "독립적 실천가",
-        "activity": "정적", "relation": "개인몰입",
-        "focus": "역량성장", "style": "표현창작",
-        "clubs": ["그린나래", "성미회", "행소문화회", "글터"]
-    },
-    "SPOC": {
-        "name": "자유로운 개척자",
-        "activity": "정적", "relation": "개인몰입",
-        "focus": "역량성장", "style": "탐구실천",
-        "clubs": ["TIME", "GNC"]
-    },
-    "STIN": {
-        "name": "따뜻한 실내교류형",
-        "activity": "정적", "relation": "교류협업",
-        "focus": "취미향유", "style": "표현창작",
-        "clubs": ["겟세마네", "반촌", "성불회", "CCC", "UBF", "다정"]
-    },
-    "STIC": {
-        "name": "창의적 협업가",
-        "activity": "정적", "relation": "교류협업",
-        "focus": "취미향유", "style": "탐구실천",
-        "clubs": ["별누리", "팀선비", "다정"]
-    },
-    "STON": {
-        "name": "꾸준한 공동체형",
-        "activity": "정적", "relation": "교류협업",
-        "focus": "역량성장", "style": "표현창작",
-        "clubs": ["심산한누리", "호우회", "KUSA", "HERA"]
-    },
-    "STOC": {
-        "name": "활기찬 팀플레이어",
-        "activity": "정적", "relation": "교류협업",
-        "focus": "역량성장", "style": "탐구실천",
-        "clubs": [
-            "멋쟁이 사자처럼", "SKFC", "삼은사과", "패거리",
-            "풍물패 얼", "SWAY", "꼬", "능라촌", "대동악회",
-            "사후", "CT", "엘세데아", "애송이", "GROOV",
-            "JDA", "TuNA", "수선관 그 밴드", "헤게모니",
-            "파란"
-        ]
-    },
-    "GPIN": {
-        "name": "계획적 성장형",
-        "activity": "활동", "relation": "개인몰입",
-        "focus": "취미향유", "style": "표현창작",
-        "clubs": ["KCC"]
-    },
-    "GPIC": {
-        "name": "집중형 문제해결가",
-        "activity": "활동", "relation": "개인몰입",
-        "focus": "취미향유", "style": "탐구실천",
-        "clubs": ["기우회", "Equal", "Re:Skku"]
-    },
-    "GPON": {
-        "name": "성실한 실행가",
-        "activity": "활동", "relation": "개인몰입",
-        "focus": "역량성장", "style": "표현창작",
-        "clubs": ["Be-Nay", "AIESEC"]
-    },
-    "GPOC": {
-        "name": "독립형 도전자",
-        "activity": "활동", "relation": "개인몰입",
-        "focus": "역량성장", "style": "탐구실천",
-        "clubs": ["태권도부", "벽걸강산", "검도부"]
-    },
-    "GTIN": {
-        "name": "전략적 협력가",
-        "activity": "활동", "relation": "교류협업",
-        "focus": "취미향유", "style": "표현창작",
-        "clubs": ["SKKIP", "SKKUO", "영숨촌"]
-    },
-    "GTIC": {
-        "name": "프로젝트 추진형",
-        "activity": "활동", "relation": "교류협업",
-        "focus": "취미향유", "style": "탐구실천",
-        "clubs": ["성균극회", "성균합창단"]
-    },
-    "GTON": {
-        "name": "책임감 있는 실무형",
-        "activity": "활동", "relation": "교류협업",
-        "focus": "역량성장", "style": "표현창작",
-        "clubs": ["UNSA", "AIESEC"]
-    },
-    "GTOC": {
-        "name": "도전형 리더형",
-        "activity": "활동", "relation": "교류협업",
-        "focus": "역량성장", "style": "탐구실천",
-        "clubs": [
-            "농성회", "라켓챌린지", "성균축구단", "킹고야구반",
-            "FC어우락", "SCOOP", "MANIA", "STC", "제사포",
-            "아가리", "Ecos", "MIDAS", "Bizball", "SIGMA FC",
-            "클래스", "천종", "글로벌"
-        ]
-    }
+type_names = {
+    "SPIN": "조용한 자기계발형",
+    "SPIC": "몰입형 탐구가",
+    "SPON": "독립적 실천가",
+    "SPOC": "자유로운 개척자",
+    "STIN": "따뜻한 실내교류형",
+    "STIC": "창의적 협업가",
+    "STON": "꾸준한 공동체형",
+    "STOC": "활기찬 팀플레이어",
+    "GPIN": "계획적 성장형",
+    "GPIC": "집중형 문제해결가",
+    "GPON": "성실한 실행가",
+    "GPOC": "독립형 도전자",
+    "GTIN": "전략적 협력가",
+    "GTIC": "프로젝트 추진형",
+    "GTON": "책임감 있는 실무형",
+    "GTOC": "도전형 리더형"
 }
+
+type_details = {}
+
+for code, name in type_names.items():
+    type_details[code] = {
+        "name": name,
+
+        # 첫 번째 문자: 관심 지향점
+        "focus": "취미향유" if code[0] == "S" else "역량성장",
+
+        # 두 번째 문자: 관계 방식
+        "relation": "개인몰입" if code[1] == "P" else "교류협업",
+
+        # 세 번째 문자: 활동 환경 및 강도
+        "activity": "정적" if code[2] == "I" else "활동",
+
+        # 네 번째 문자: 활동 성격
+        "style": "표현창작" if code[3] == "N" else "탐구실천"
+    }
 
 
 # ============================================================
@@ -571,7 +499,6 @@ print("📚 전체 16유형 요약")
 print("=" * 70)
 
 for code, info in type_details.items():
-    # CSV에서 해당 유형의 네 가지 속성이 모두 일치하는 동아리 찾기
     matching_clubs = [
         club.get("동아리명", "").strip()
         for club in clubs_data
